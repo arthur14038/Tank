@@ -5,19 +5,11 @@ using UnityEngine;
 public class CameraManager : MonoBehaviour
 {
     [SerializeField]
-    GameObject m_Player;
+    GameObject m_FollowPoint;
 
-    Vector3 mFollowDistance;
-
-    void Start()
+    private void FixedUpdate()
     {
-        mFollowDistance = new Vector3(0f, 3f, -7.2f);
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        this.transform.forward = m_Player.transform.forward;
-        this.transform.position = m_Player.transform.position + m_Player.transform.TransformDirection(mFollowDistance);
+        transform.forward = Vector3.Lerp(transform.forward, m_FollowPoint.transform.forward, 0.5f);
+        transform.position = Vector3.Lerp(transform.position, m_FollowPoint.transform.position, 0.5f);
     }
 }
