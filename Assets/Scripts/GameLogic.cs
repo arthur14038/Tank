@@ -12,6 +12,7 @@ public class GameLogic : SingletonMonoBehavior<GameLogic>
     {
         GameUIManager.Instance.Init();
         GameUIManager.Instance.OnTankChanged += OnChangeTank;
+        GameUIManager.Instance.OnAttackChanged += OnChangeAttack;
 
         m_Tank.Init();
 
@@ -27,10 +28,16 @@ public class GameLogic : SingletonMonoBehavior<GameLogic>
     private void OnDestroy()
     {
         GameUIManager.Instance.OnTankChanged -= OnChangeTank;
+        GameUIManager.Instance.OnAttackChanged -= OnChangeAttack;
     }
 
     void OnChangeTank(TankType tankType)
     {
         m_Tank.SetTankType(tankType);
+    }
+
+    void OnChangeAttack(AttackType attackType)
+    {
+        m_Tank.SetAttackType(attackType);
     }
 }

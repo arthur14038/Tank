@@ -8,11 +8,11 @@ public class TankBehavior : MonoBehaviour
     [SerializeField]
     Transform m_Turret;
     [SerializeField]
-    AudioClip m_IdleSound;
-    [SerializeField]
-    AudioClip m_DrivingSound;
-    [SerializeField]
     AudioClip m_ReloadSound;
+    [SerializeField]
+    AudioClip m_SlashSound;
+    [SerializeField]
+    AudioClip m_SlashReloadSound;
     [SerializeField]
     AudioSource m_AudioSource;
 
@@ -24,29 +24,51 @@ public class TankBehavior : MonoBehaviour
     private float mTurnInputValue;
     Vector3 mMovement = Vector3.forward;
     RecyclableObject mTankModel = null;
-    float mShootForce = 5f;
-    float mCurrentDamage = 25;
-    float mCurrentReloadTime = 0f;
-    float mReloadTime = 1.5f;
+    TankAttack_Base mTankAttack;
+    AttackType mCurrentAttackType = AttackType.Cannon;
 
     public void Init()
     {
         mTankRigidbody = GetComponent<Rigidbody>();
         mTankRigidbody.isKinematic = true;
+
+        SetAttackType(AttackType.Cannon);
+    }
+
+    public void SetAttackType(AttackType attackType)
+    {
+        mCurrentAttackType = attackType;
+        if (mTankAttack != null)
+        {
+            mTankAttack.OnReloadComplete -= ReloadComplete;
+            mTankAttack.OnFireEvent -= OnFire;
+        }
+
+        switch (attackType)
+        {
+            case AttackType.Cannon:
+                mTankAttack = new TankAttack_Cannon(m_Turret);
+                break;
+            case AttackType.Slash:
+                mTankAttack = new TankAttack_Slash(m_Turret);
+                break;
+        }
+        mTankAttack.OnReloadComplete += ReloadComplete;
+        mTankAttack.OnFireEvent += OnFire;
     }
 
     public void SetTankType(TankType tankType)
     {
         ObjectType objectType = ObjectType.Tank_Green;
-        mCurrentDamage = 25f;
+        mTankAttack.Damage = 25f;
         switch (tankType)
         {
             case TankType.Blue:
-                mCurrentDamage = 20f;
+                mTankAttack.Damage = 20f;
                 objectType = ObjectType.Tank_Blue;
                 break;
             case TankType.Red:
-                mCurrentDamage = 10f;
+                mTankAttack.Damage = 10f;
                 objectType = ObjectType.Tank_Red;
                 break;
         }
@@ -56,22 +78,13 @@ public class TankBehavior : MonoBehaviour
 
         mTankModel = ObjectPool.Instance.GetRecyclableObject(objectType);
         mTankModel.Spawn(transform.position, transform.rotation, transform);
-        m_AudioSource.clip = m_IdleSound;
-        if (!m_AudioSource.isPlaying)
-            m_AudioSource.Play();
 
         mTankRigidbody.isKinematic = false;
     }
 
     private void Update()
     {
-        if (mCurrentReloadTime > 0f)
-        {
-            mCurrentReloadTime -= Time.deltaTime;
-            GameUIManager.Instance.SetCD(mCurrentReloadTime / mReloadTime);
-            if (mCurrentReloadTime <= 0f)
-                ReloadComplete();
-        }
+        mTankAttack.UpdateAttack();        
     }
 
     private void FixedUpdate()
@@ -102,42 +115,33 @@ public class TankBehavior : MonoBehaviour
 
         mMovementInputValue = mCurrentInput.y;
         mTurnInputValue = mCurrentInput.x;
-
-        if (mMovementInputValue == 0)
-            m_AudioSource.clip = m_IdleSound;
-        else
-            m_AudioSource.clip = m_DrivingSound;
-
-        if (!m_AudioSource.isPlaying)
-            m_AudioSource.Play();
     }
 
     private void OnFire(InputValue value)
     {
-        Fire();
-    }
-
-    void Fire()
-    {
-        if (mCurrentReloadTime > 0f)
-            return;
-
-        var bullet = ObjectPool.Instance.GetRecyclableObject(ObjectType.Bullet) as BulletBehavior;
-        bullet.Spawn(m_Turret.position, transform.rotation, null);
-        bullet.ShootIt(transform.forward * mShootForce, mCurrentDamage);
-
-        Reload();
-    }
-
-    void Reload()
-    {
-        mCurrentReloadTime = mReloadTime;
-        GameUIManager.Instance.SetCD(mCurrentReloadTime / mReloadTime);
+        mTankAttack.OnFire();
     }
 
     void ReloadComplete()
     {
-        GameUIManager.Instance.SetCD(0f);
-        m_AudioSource.PlayOneShot(m_ReloadSound);
+        switch (mCurrentAttackType)
+        {
+            case AttackType.Slash:
+                m_AudioSource.PlayOneShot(m_SlashReloadSound);
+                break;
+            case AttackType.Cannon:
+                m_AudioSource.PlayOneShot(m_ReloadSound);
+                break;
+        }
+    }
+
+    void OnFire()
+    {
+        switch(mCurrentAttackType)
+        {
+            case AttackType.Slash:
+                m_AudioSource.PlayOneShot(m_SlashSound);
+                break;
+        }
     }
 }

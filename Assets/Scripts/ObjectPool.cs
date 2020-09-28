@@ -10,6 +10,7 @@ public enum ObjectType
     Bullet,
     HitEffect,
     HayCollapse,
+    SlashEffect,
     End
 }
 
